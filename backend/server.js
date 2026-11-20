@@ -25,14 +25,34 @@ app.use("/api/v1/tv", protectRoute, tvRoutes);
 app.use("/api/v1/search", protectRoute, searchRoutes);
 
 if (ENV_VARS.NODE_ENV === "production") {
-	app.use(express.static(path.join(__dirname, "/frontend/dist")));
+  app.use(express.static(path.join(__dirname, "/frontend/dist")));
 
-	app.get("*", (req, res) => {
-		res.sendFile(path.resolve(__dirname, "frontend", "dist", "index.html"));
-	});
+  app.get("*", (req, res) => {
+    res.sendFile(path.resolve(__dirname, "frontend", "dist", "index.html"));
+  });
 }
 
-app.listen(PORT, () => {
-	console.log("Server started at http://localhost:" + PORT);
-	connectDB();
-});
+const startServer = async () => {
+  const requiredEnvVars = ["MONGO_URI", "JWT_SECRET", "TMDB_API_KEY"];
+  const missingEnvVars = requiredEnvVars.filter((name) => !ENV_VARS[name]);
+
+  if (missingEnvVars.length > 0) {
+    console.error(
+      `Missing required environment variables: ${missingEnvVars.join(", ")}. Configure them in .env.`,
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  try {
+    await connectDB();
+    app.listen(PORT, () => {
+      console.log("Server started at http://localhost:" + PORT);
+    });
+  } catch (error) {
+    console.error("Server startup failed:", error.message);
+    process.exitCode = 1;
+  }
+};
+
+startServer();
